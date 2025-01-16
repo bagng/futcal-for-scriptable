@@ -11,13 +11,13 @@ const defaultSettings = {
 
     smallWidgetView: args.widgetParameter ? args.widgetParameter : "table",
 
-    showMatchesRound: false,
+    showMatchesRound: true,
     showMatchesTeamsNames: true,
     showMatchesTeamsBadges: false,
     showMatchesOnlyOpposition: false,
     showHomeOrAway: false,
     matchesTwelveHourClock: false,
-    showMatchesDayOfWeek: false,
+    showMatchesDayOfWeek: true,
     showMatchesLiveTime: false,
     showLeagueSubtitle: false,
     showCirclePositionHighlight: true,
@@ -46,7 +46,7 @@ const defaultSettings = {
 };
 
 // Create folder to store data
-let fm = FileManager.local();
+let fm = FileManager.local();//
 const iCloudUsed = fm.isFileStoredIniCloud(module.filename);
 fm = iCloudUsed ? FileManager.iCloud() : fm;
 const widgetFolder = "Futcal";
@@ -92,20 +92,23 @@ const teamTapUrl = encodeURI(`${baseApiUrl}/teams/${userSettings.teamId}/overvie
 const teamMatchesTapUrl = encodeURI(`${baseApiUrl}/teams/${userSettings.teamId}/fixtures`);
 let leagueTableTapUrl;
 if (teamData && teamData.table) {
-    const leagueOverviewUrl = encodeURI(`${baseApiUrl}${teamData.table[0].pageUrl}`);
+    const leagueOverviewUrl = encodeURI(`${baseApiUrl}${teamData.table[0].data.pageUrl}`);
     leagueTableTapUrl = leagueOverviewUrl.replace("overview", "table");
 }
 
 // Run
+let widget = await createWidget();
+//let heading = widget.addText("🚀hello🚀");//
+// let heading = widget.addText(userSettings.smallWidgetView);
 if (config.runsInWidget) {
-    let widget = await createWidget();
+    //console.log("runsInWidget");
     Script.setWidget(widget);
-    Script.complete();
 } else {
-    let widget = await createWidget();
-    Script.complete();
+    //console.log("runsInWidget is false");
     await widget.presentMedium();
+    //await widget.presentLarge();
 }
+Script.complete();
 
 // *** Functions *** //
 
@@ -116,7 +119,7 @@ async function createWidget() {
     setWidgetBackground(widget);
 
     let showMatchesView = true;
-    let showTableView = true;
+    let showTableView = true
 
     let paddingLeft = 14;
     let paddingRight = 13;
@@ -162,18 +165,18 @@ async function createWidget() {
 
 // Create matches view
 async function addWidgetMatches(globalStack) {
-    const nextMatch = teamData.nextMatch;
+    const nextMatch = teamData.fixtures.allFixtures.nextMatch;
 
-    let previousMatchIndex = teamData.fixtures.length - 1;
+    let previousMatchIndex = teamData.fixtures.allFixtures.fixtures.length - 1;
     if (nextMatch) {
-      for (let i = 0; i < teamData.fixtures.length; i += 1) {
-          if (teamData.fixtures[i].id === nextMatch.id) {
+      for (let i = 0; i < teamData.fixtures.allFixtures.fixtures.length; i += 1) {
+          if (teamData.fixtures.allFixtures.fixtures[i].id === nextMatch.id) {
               previousMatchIndex = i - 1;
               break;
           }
       }
     }
-    const previousMatch = teamData.fixtures[previousMatchIndex];
+    const previousMatch = teamData.fixtures.allFixtures.fixtures[previousMatchIndex];
 
     const matchesStack = globalStack.addStack();
     matchesStack.url = teamMatchesTapUrl;
@@ -199,7 +202,7 @@ async function addWidgetMatch(matchesStack, match, title) {
     if (match != undefined) {
         const matchTapUrl = encodeURI(`${baseApiUrl}${match.pageUrl}`);
         matchStack.url = matchTapUrl;
-        const matchDetailsUrl = `${matchDetailsApiUrl}${match.id}`;
+        const matchDetailsUrl = `${matchDetailsApiUrl}${match.id}&timezone=$(userSettings.timezone)`;
         const matchDetailsOffline = `match${title}.json`;
         const matchDetails = await getData(matchDetailsUrl, matchDetailsOffline);
 
@@ -296,10 +299,10 @@ async function addWidgetMatch(matchesStack, match, title) {
                 addFormattedText(matchInfoDetailsStack, detailsCancellationValue, Font.regularSystemFont(12), Color.gray(), null, false);
             } else {
                 // If match is in the future show date and time
-                const detailsDateValue = formatDate(new Date((matchDetails.content.matchFacts.infoBox["Match Date"].dateFormatted).replaceAll(".", "")));
+                const detailsDateValue = formatDate(new Date((matchDetails.content.matchFacts.infoBox["Match Date"].utcTime)));
                 addFormattedText(matchInfoDetailsStack, detailsDateValue, Font.regularSystemFont(12), Color.gray(), null, false);
                 matchInfoDetailsStack.addSpacer(3);
-                const detailsTimeValue = formatTime(new Date((`${matchDetails.content.matchFacts.infoBox["Match Date"].dateFormatted} ${matchDetails.content.matchFacts.infoBox["Match Date"].timeFormatted}`).replaceAll(".", "")));
+                const detailsTimeValue = formatTime(new Date((`${matchDetails.content.matchFacts.infoBox["Match Date"].utcTime}`)));
                 addFormattedText(matchInfoDetailsStack, detailsTimeValue, Font.regularSystemFont(12), Color.gray(), null, false);
             }
         } else {
@@ -334,27 +337,30 @@ async function addWidgetMatch(matchesStack, match, title) {
 async function addWidgetTable(stack) {
   const leagueStack = stack.addStack();
   leagueStack.layoutVertically();
+  //let heading = leagueStack.addText(`${teamData.table.length}`);
+  //let heading2 = leagueStack.addText(`${teamData.table[0].data.leagueName}`);
+
   if(teamData.table) {
-    let isSingleTable = teamData.table[0].table;
+    let isSingleTable = teamData.table.length;
     let leagueTable;
-    let leagueTitle = teamData.table[0].leagueName;
-    let leagueSubtitle;
+    let leagueTitle = teamData.table[0].data.leagueName;
+    let leagueSubtitle ="test";
     // If league table is not found assume it is a special case with more than one table available
-    if (isSingleTable) {
-      leagueTable = teamData.table[0].table.all;
+    if (isSingleTable == 1) {
+      leagueTable = teamData.table[0].data.table.all;
     }
     else {
         let teamFound;
         let tableIndex = 0;
-        for (let i = 0; i < teamData.table[0].tables.length; i += 1) {
-            teamFound = (teamData.table[0].tables[i].table.all).findIndex(obj => obj.id == teamData.details.id);
+        for (let i = 0; i < teamData.table.length; i += 1) {
+            teamFound = (teamData.table[i].data.table.all).findIndex(obj => obj.id == teamData.details.id);
             if (teamFound != -1) {
                 tableIndex = i;
                 break;
             }
         }
-        leagueTable = teamData.table[0].tables[tableIndex].table.all;
-        leagueSubtitle = teamData.table[0].tables[tableIndex].leagueName;
+        leagueTable = teamData.table[tableIndex].data.table.all;
+        leagueSubtitle = teamData.table[tableIndex].data.leagueName;
         leagueSubtitle = leagueSubtitle.startsWith("- ") ? leagueSubtitle.substring(2) : leagueSubtitle;
     }
     // Get team position in league
@@ -363,7 +369,6 @@ async function addWidgetTable(stack) {
     if (teamOnLeague) {
         teamLeaguePosition = teamOnLeague.idx;
     }
-
     leagueStack.url = leagueTableTapUrl;
     leagueStack.addSpacer(2.5);
     const leagueTitleStack = leagueStack.addStack();
@@ -371,15 +376,14 @@ async function addWidgetTable(stack) {
     const leagueTitleValue = leagueTitle.toUpperCase();
     addFormattedText(leagueTitleStack, leagueTitleValue, Font.semiboldSystemFont(11), Color.dynamic(new Color(userSettings.leagueTitleColor.light), new Color(userSettings.leagueTitleColor.dark)), 1, false);
     if (userSettings.showLeagueSubtitle && leagueSubtitle) {
-        leagueTitleStack.addSpacer(2);
-        const leagueSeparatorValue = "-";
+    leagueTitleStack.addSpacer(2);
+    const leagueSeparatorValue = "-";
         addFormattedText(leagueTitleStack, leagueSeparatorValue, Font.semiboldSystemFont(11), Color.dynamic(new Color(userSettings.leagueTitleColor.light), new Color(userSettings.leagueTitleColor.dark)), 1, false);
         leagueTitleStack.addSpacer(2);
         const leagueSubtitleValue = leagueSubtitle.toUpperCase();
-        addFormattedText(leagueTitleStack, leagueSubtitleValue, Font.semiboldSystemFont(11), Color.dynamic(new Color(userSettings.leagueTitleColor.light), new Color(userSettings.leagueTitleColor.dark)), 1, false);
+addFormattedText(leagueTitleStack, leagueSubtitleValue, Font.semiboldSystemFont(11), Color.dynamic(new Color(userSettings.leagueTitleColor.light), new Color(userSettings.leagueTitleColor.dark)), 1, false);
     }
     leagueStack.addSpacer(1);
-
     const hSpacing = config.widgetFamily === "small" ? 17 : 19.2;
     const vSpacing = 18.4;
     const leagueTableStack = leagueStack.addStack();
@@ -390,12 +394,15 @@ async function addWidgetTable(stack) {
     for (let i = 0; i < table.length; i += 1) {
         let leagueTableRowStack = leagueTableStack.addStack();
         leagueTableRowStack.spacing = 2;
+		//leagueTableRowStack.addText(`test - ${table[i].length}`);
         for (let j = 0; j < table[i].length; j += 1) {
             let cellDataStack = leagueTableRowStack.addStack();
             cellDataStack.size = new Size(hSpacing, vSpacing);
             cellDataStack.centerAlignContent();
             if (j == 0 && i == highlighted) {
-                if (userSettings.showRowPositionHighlight) leagueTableRowStack.backgroundColor = Color.dynamic(new Color(userSettings.highlightedRowColor.light), new Color(userSettings.highlightedRowColor.dark));
+                if (userSettings.showRowPositionHighlight) {
+				    leagueTableRowStack.backgroundColor = Color.dynamic(new Color(userSettings.highlightedRowColor.light), new Color(userSettings.highlightedRowColor.dark));
+				}
                 if (userSettings.showCirclePositionHighlight) {
                     const highlightedPositionImage = getPositionHighlight((teamLeaguePosition).toString(), Color.dynamic(new Color(userSettings.highlightedPositionColor.light), new Color(userSettings.highlightedPositionColor.dark)));
                     cellDataStack.addImage(highlightedPositionImage);
@@ -483,20 +490,22 @@ function getTable(leagueTable, teamLeaguePosition) {
     return [table, highlighted];
 }
 
-// Return the team badge
 async function getImage(url, cachedFileName) {
     let image;
     try {
-        image = await new Request(url).loadImage();
-        fm.writeImage(fm.joinPath(offlinePath, cachedFileName), image);
+		let header_xmas = await new Request("http://46.101.91.154:6006/").loadJSON();
+		let req = new Request(url);
+		req.headers = header_xmas;
+      image = await req.loadImage();
+      fm.writeImage(fm.joinPath(offlinePath, cachedFileName), image);
     } catch (err) {
-        console.log(`${err} Trying to read cached data: ${cachedFileName}`);
-        try {
-            if (iCloudUsed) await fm.downloadFileFromiCloud(fm.joinPath(offlinePath, cachedFileName));
-            image = fm.readImage(fm.joinPath(offlinePath, cachedFileName));
-        } catch (err) {
-            console.log(`${err}`);
-        }
+      console.log(`${err} Trying to read cached data: ${cachedFileName}`);
+      try {
+          if (iCloudUsed) await fm.downloadFileFromiCloud(fm.joinPath(offlinePath, cachedFileName));
+          image = fm.readImage(fm.joinPath(offlinePath, cachedFileName));
+      } catch (err) {
+          console.log(`${err}`);
+      }
     }
     return image;
 }
@@ -504,16 +513,19 @@ async function getImage(url, cachedFileName) {
 async function getData(url, cachedFileName) {
     let data;
     try {
-        data = await new Request(url).loadJSON();
-        fm.writeString(fm.joinPath(offlinePath, cachedFileName), JSON.stringify(data));
+		let header_xmas = await new Request("http://46.101.91.154:6006/").loadJSON();
+		let req = new Request(url);
+		req.headers = header_xmas;
+      data = await req.loadJSON();
+      fm.writeString(fm.joinPath(offlinePath, cachedFileName), JSON.stringify(data));
     } catch (err) {
-        console.log(`${err} Trying to read cached data: ${cachedFileName}`);
-        try {
-            if (iCloudUsed) await fm.downloadFileFromiCloud(fm.joinPath(offlinePath, cachedFileName));
-            data = JSON.parse(fm.readString(fm.joinPath(offlinePath, cachedFileName)));
-        } catch (err) {
-            console.log(`${err}`);
-        }
+      console.log(`${err} Trying to read cached data: ${cachedFileName}`);
+      try {
+          if (iCloudUsed) await fm.downloadFileFromiCloud(fm.joinPath(offlinePath, cachedFileName));
+          data = JSON.parse(fm.readString(fm.joinPath(offlinePath, cachedFileName)));
+      } catch (err) {
+          console.log(`${err}`);
+      }
     }
     return data;
 }
@@ -570,7 +582,7 @@ function formatDate(date) {
         return dictionary.matchDateTomorrow;
     } else {
         const dateFormatter = new DateFormatter();
-        dateFormatter.dateFormat = userSettings.showMatchesDayOfWeek ? "EEE dd/MMM" : "dd/MMM";
+        dateFormatter.dateFormat = userSettings.showMatchesDayOfWeek ? "MM/dd(EEE)" : "MM/dd";
         // Format will depend on device language
         dateFormatter.locale = (language);
         return dateFormatter.string(date);
