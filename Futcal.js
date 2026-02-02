@@ -493,9 +493,14 @@ function getTable(leagueTable, teamLeaguePosition) {
 async function getImage(url, cachedFileName) {
     let image;
     try {
-		let header_xmas = await new Request("http://46.101.91.154:6006/").loadJSON();
-		let req = new Request(url);
-		req.headers = header_xmas;
+	  //let header_xmas = await new Request("http://46.101.91.154:6006/").loadJSON();
+	  //let req = new Request(url);
+	  //req.headers = header_xmas;
+      //image = await req.loadImage();
+      //fm.writeImage(fm.joinPath(offlinePath, cachedFileName), image);
+	  console.log("getImage url : " + url);
+	  let req = new Request(url);
+      // 헤더 요청 부분 삭제함
       image = await req.loadImage();
       fm.writeImage(fm.joinPath(offlinePath, cachedFileName), image);
     } catch (err) {
@@ -513,9 +518,14 @@ async function getImage(url, cachedFileName) {
 async function getData(url, cachedFileName) {
     let data;
     try {
-		let header_xmas = await new Request("http://46.101.91.154:6006/").loadJSON();
-		let req = new Request(url);
-		req.headers = header_xmas;
+      //let header_xmas = await new Request("http://46.101.91.154:6006/").loadJSON();
+      //let req = new Request(url);
+	  //req.headers = header_xmas;
+      //data = await req.loadJSON();
+      //fm.writeString(fm.joinPath(offlinePath, cachedFileName), JSON.stringify(data));
+	  console.log("getData url : " + url);
+	  let req = new Request(url);
+      // 헤더 요청 부분 삭제함
       data = await req.loadJSON();
       fm.writeString(fm.joinPath(offlinePath, cachedFileName), JSON.stringify(data));
     } catch (err) {
